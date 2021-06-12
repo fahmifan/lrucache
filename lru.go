@@ -50,7 +50,7 @@ func (q *Queue) isOne() bool {
 	return q.head != nil && q.head.next == nil
 }
 
-// Inert Node to the first of the queue
+// InsertFirst insert Node to the first of the queue
 func (q *Queue) InsertFirst(newHead *Node) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
