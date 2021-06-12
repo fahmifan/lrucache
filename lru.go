@@ -1,9 +1,21 @@
 package lrucache
 
+import (
+	"sync"
+	"sync/atomic"
+)
+
 type Node struct {
-	item Item
-	next *Node
-	prev *Node
+	item  Item
+	mutex sync.Mutex
+	next  *Node
+	prev  *Node
+}
+
+func (n *Node) SetItem(i Item) {
+	n.mutex.Lock()
+	n.item = i
+	n.mutex.Unlock()
 }
 
 // set next & prev to nil
@@ -18,12 +30,12 @@ func (n *Node) breakLinks() {
 
 // Queue implemented in linked list
 type Queue struct {
-	head *Node
-	tail *Node
+	head  *Node
+	tail  *Node
+	mutex sync.Mutex
 }
 
 func NewQueue() *Queue {
-
 	return &Queue{
 		head: nil,
 		tail: nil,
@@ -40,6 +52,9 @@ func (q *Queue) isOne() bool {
 
 // Inert Node to the first of the queue
 func (q *Queue) InsertFirst(newHead *Node) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+
 	if q.isEmpty() {
 		q.head = newHead
 		q.tail = newHead
@@ -54,7 +69,14 @@ func (q *Queue) InsertFirst(newHead *Node) {
 
 // RemoveBack remove the last Node in the queue
 func (q *Queue) RemoveLast() *Node {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+
 	if q.isEmpty() {
+		return nil
+	}
+
+	if q.tail == nil {
 		return nil
 	}
 
@@ -75,6 +97,9 @@ func (q *Queue) RemoveLast() *Node {
 
 // RemoveNode remove node from the queue
 func (q *Queue) RemoveNode(node *Node) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+
 	if q.isEmpty() {
 		return
 	}
@@ -116,18 +141,38 @@ type Item struct {
 	Value interface{}
 }
 
-const DefaultMaxSize = 24
+const DefaultMaxSize int64 = 24
 
 // LRUCacher not concurrent safe
 type LRUCacher struct {
+	MaxSize int64
+
 	queue       *Queue
-	hash        map[string]*Node
-	MaxSize     int
-	currentSize int
+	currentSize int64
+	mutex       sync.Mutex
+
+	hash      map[string]*Node
+	hashMutex sync.RWMutex
+}
+
+func (l *LRUCacher) getItem(key string) *Node {
+	l.hashMutex.RLock()
+	node := l.hash[key]
+	l.hashMutex.RUnlock()
+	return node
 }
 
 func (l *LRUCacher) removeItem(item Item) {
+	l.hashMutex.Lock()
 	delete(l.hash, item.Key)
+	l.hashMutex.Unlock()
+}
+
+func (l *LRUCacher) putItem(node *Node) {
+	l.hashMutex.Lock()
+	l.hash[node.item.Key] = node
+	l.hashMutex.Unlock()
+
 }
 
 func (l *LRUCacher) queueIsFull() bool {
@@ -140,44 +185,50 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 	}
 
 	if l.queue == nil {
+		l.mutex.Lock()
 		l.queue = NewQueue()
+		l.mutex.Unlock()
 	}
 
 	if l.hash == nil {
+		l.hashMutex.Lock()
 		l.hash = make(map[string]*Node)
+		l.hashMutex.Unlock()
 	}
 
-	item := Item{
-		Key:   key,
-		Value: value,
-	}
+	item := Item{Key: key, Value: value}
 
 	// if key already exist just replace the cache item
-	oldNode, ok := l.hash[key]
-	if ok {
-		oldNode.item = item
+	oldNode := l.getItem(key)
+	if oldNode != nil {
+		oldNode.SetItem(item)
 		return
 	}
 
 	node := &Node{item: item}
 	if l.queueIsFull() {
 		last := l.queue.RemoveLast()
+		if last == nil {
+			return
+		}
 		l.removeItem(last.item)
-
-		l.hash[key] = node
+		l.putItem(node)
 		l.queue.InsertFirst(node)
 		return
 	}
 
-	l.hash[key] = node
+	l.putItem(node)
 	l.queue.InsertFirst(node)
-	l.currentSize++
+	atomic.AddInt64(&l.currentSize, 1)
 }
 
 func (l *LRUCacher) Get(key string) interface{} {
 	if l.hash == nil {
 		return nil
 	}
+
+	l.hashMutex.RLock()
+	defer l.hashMutex.RUnlock()
 
 	val, ok := l.hash[key]
 	if !ok {
@@ -188,8 +239,8 @@ func (l *LRUCacher) Get(key string) interface{} {
 }
 
 func (l *LRUCacher) Del(key string) interface{} {
-	node, ok := l.hash[key]
-	if !ok {
+	node := l.getItem(key)
+	if node == nil {
 		return nil
 	}
 

@@ -1,6 +1,8 @@
 package lrucache
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,4 +105,31 @@ func TestLRUCacher_PutExistingKey(t *testing.T) {
 	lru.Put("1", "foobar")
 	val = lru.Get("1")
 	assert.Equal(t, "foobar", val.(string))
+}
+
+func TestLRUCacher_Concurrent(t *testing.T) {
+	wg := sync.WaitGroup{}
+	lru := &LRUCacher{MaxSize: 20}
+	F := fmt.Sprintf
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			lru.Put(F("%d", i), i)
+		}(i)
+
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			lru.Get(F("%d", i%50))
+		}(i)
+
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			lru.Del(F("%d", i%50))
+		}(i)
+	}
+
+	wg.Wait()
 }
