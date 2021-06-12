@@ -2,7 +2,6 @@ package lrucache
 
 import (
 	"sync"
-	"sync/atomic"
 )
 
 type Node struct {
@@ -24,8 +23,10 @@ func (n *Node) breakLinks() {
 		return
 	}
 
+	n.mutex.Lock()
 	n.next = nil
 	n.prev = nil
+	n.mutex.Unlock()
 }
 
 // Queue implemented in linked list
@@ -147,12 +148,13 @@ const DefaultMaxSize int64 = 24
 type LRUCacher struct {
 	MaxSize int64
 
-	queue       *Queue
-	currentSize int64
-	mutex       sync.Mutex
+	queue      *Queue
+	count      int64
+	countMutex sync.RWMutex
 
 	hash      map[string]*Node
 	hashMutex sync.RWMutex
+	initOnce  sync.Once
 }
 
 func (l *LRUCacher) getItem(key string) *Node {
@@ -176,25 +178,20 @@ func (l *LRUCacher) putItem(node *Node) {
 }
 
 func (l *LRUCacher) queueIsFull() bool {
-	return l.currentSize == l.MaxSize
+	l.countMutex.RLock()
+	ok := l.count == l.MaxSize
+	l.countMutex.RUnlock()
+	return ok
 }
 
 func (l *LRUCacher) Put(key string, value interface{}) {
-	if l.MaxSize < 1 {
-		l.MaxSize = DefaultMaxSize
-	}
-
-	if l.queue == nil {
-		l.mutex.Lock()
+	l.initOnce.Do(func() {
+		if l.MaxSize < 1 {
+			l.MaxSize = DefaultMaxSize
+		}
 		l.queue = NewQueue()
-		l.mutex.Unlock()
-	}
-
-	if l.hash == nil {
-		l.hashMutex.Lock()
 		l.hash = make(map[string]*Node)
-		l.hashMutex.Unlock()
-	}
+	})
 
 	item := Item{Key: key, Value: value}
 
@@ -219,16 +216,19 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 
 	l.putItem(node)
 	l.queue.InsertFirst(node)
-	atomic.AddInt64(&l.currentSize, 1)
+
+	l.countMutex.Lock()
+	l.count++
+	l.countMutex.Unlock()
 }
 
 func (l *LRUCacher) Get(key string) interface{} {
+	l.hashMutex.RLock()
+	defer l.hashMutex.RUnlock()
+
 	if l.hash == nil {
 		return nil
 	}
-
-	l.hashMutex.RLock()
-	defer l.hashMutex.RUnlock()
 
 	val, ok := l.hash[key]
 	if !ok {
