@@ -151,7 +151,7 @@ const DefaultMaxSize int64 = 24
 
 // LRUCacher ..
 type LRUCacher struct {
-	MaxSize int64
+	maxSize int64
 
 	queue      *Queue
 	count      int64
@@ -159,7 +159,17 @@ type LRUCacher struct {
 
 	hash      map[string]*Node
 	hashMutex sync.RWMutex
-	initOnce  sync.Once
+}
+
+func NewLRUCacher(maxSize int64) *LRUCacher {
+	if maxSize < 1 {
+		maxSize = DefaultMaxSize
+	}
+	return &LRUCacher{
+		queue:   NewQueue(),
+		hash:    make(map[string]*Node),
+		maxSize: maxSize,
+	}
 }
 
 func (l *LRUCacher) getItem(key string) *Node {
@@ -184,21 +194,13 @@ func (l *LRUCacher) putItem(node *Node) {
 
 func (l *LRUCacher) queueIsFull() bool {
 	l.countMutex.RLock()
-	ok := l.count == l.MaxSize
+	ok := l.count == l.maxSize
 	l.countMutex.RUnlock()
 	return ok
 }
 
 // Put ..
 func (l *LRUCacher) Put(key string, value interface{}) {
-	l.initOnce.Do(func() {
-		if l.MaxSize < 1 {
-			l.MaxSize = DefaultMaxSize
-		}
-		l.queue = NewQueue()
-		l.hash = make(map[string]*Node)
-	})
-
 	item := Item{Key: key, Value: value}
 
 	// if key already exist just replace the cache item

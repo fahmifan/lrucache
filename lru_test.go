@@ -10,20 +10,20 @@ import (
 
 func TestLRUCacher_Del(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		lru := &LRUCacher{}
+		lru := NewLRUCacher(0)
 		val := lru.Del("empty")
 		assert.Equal(t, nil, val)
 	})
 
 	t.Run("one", func(t *testing.T) {
-		lru := &LRUCacher{}
+		lru := NewLRUCacher(0)
 		lru.Put("1", "1")
 		val := lru.Del("1")
 		assert.Equal(t, "1", val.(string))
 	})
 
 	t.Run("last item", func(t *testing.T) {
-		lru := &LRUCacher{}
+		lru := NewLRUCacher(0)
 		lru.Put("1", "1")
 		lru.Put("2", "2")
 
@@ -32,7 +32,7 @@ func TestLRUCacher_Del(t *testing.T) {
 	})
 
 	t.Run("middle item", func(t *testing.T) {
-		lru := &LRUCacher{}
+		lru := NewLRUCacher(0)
 		lru.Put("1", "1")
 		lru.Put("2", "2")
 		lru.Put("3", "3")
@@ -43,7 +43,7 @@ func TestLRUCacher_Del(t *testing.T) {
 }
 
 func TestLRUCacher_SizeOne(t *testing.T) {
-	lru := &LRUCacher{MaxSize: 1}
+	lru := NewLRUCacher(1)
 	lru.Put("1", "1")
 	lru.Put("2", "2")
 
@@ -55,23 +55,24 @@ func TestLRUCacher_SizeOne(t *testing.T) {
 }
 
 func TestLRUCacher_EmptySize(t *testing.T) {
-	lru := &LRUCacher{}
+	lru := NewLRUCacher(0)
 
 	lru.Put("1", "1")
 	lru.Put("2", "2")
 	val := lru.Get("1")
 	assert.Equal(t, "1", val.(string))
 
-	assert.Equal(t, DefaultMaxSize, lru.MaxSize)
+	assert.Equal(t, DefaultMaxSize, lru.maxSize)
 }
 
 func TestLRUCacher(t *testing.T) {
-	lru := &LRUCacher{MaxSize: 3}
+	lru := NewLRUCacher(3)
 
 	lru.Put("1", "1")
 	lru.Put("2", "2")
 	val := lru.Get("1")
 	assert.Equal(t, "1", val.(string))
+	assert.Equal(t, 2, len(lru.hash))
 
 	lru.Put("3", "3")
 	val = lru.Get("3")
@@ -80,6 +81,7 @@ func TestLRUCacher(t *testing.T) {
 	// not found
 	val = lru.Get("4")
 	assert.Equal(t, nil, val)
+	assert.Equal(t, 3, len(lru.hash))
 
 	// already evicted
 	lru.Put("4", "4")
@@ -93,10 +95,11 @@ func TestLRUCacher(t *testing.T) {
 	// deleted from the cache
 	val = lru.Get("4")
 	assert.Equal(t, nil, val)
+	assert.Equal(t, 2, len(lru.hash))
 }
 
 func TestLRUCacher_PutExistingKey(t *testing.T) {
-	lru := &LRUCacher{MaxSize: 3}
+	lru := &LRUCacher{maxSize: 3}
 
 	lru.Put("1", "1")
 	val := lru.Get("1")
@@ -109,7 +112,7 @@ func TestLRUCacher_PutExistingKey(t *testing.T) {
 
 func TestLRUCacher_Concurrent(t *testing.T) {
 	wg := sync.WaitGroup{}
-	lru := &LRUCacher{MaxSize: 20}
+	lru := &LRUCacher{maxSize: 20}
 	F := fmt.Sprintf
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
@@ -132,4 +135,31 @@ func TestLRUCacher_Concurrent(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func BenchmarkLRUCacher(b *testing.B) {
+	b.Run("Put", func(b *testing.B) {
+		lru := NewLRUCacher(1000)
+		for i := 0; i < b.N; i++ {
+			lru.Put(fmt.Sprintf("%d", i), i)
+		}
+	})
+
+	lruSeeded := NewLRUCacher(1000)
+	for i := 0; i < 1000; i++ {
+		lruSeeded.Put(fmt.Sprintf("%d", i), i)
+	}
+
+	b.Run("Get", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			lruSeeded.Get(fmt.Sprintf("%d", i))
+		}
+	})
+
+	b.Run("Del", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			// non sequential delete
+			lruSeeded.Del(fmt.Sprintf("%d", (i+45)%1000))
+		}
+	})
 }
