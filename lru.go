@@ -6,6 +6,7 @@ type Node struct {
 	prev *Node
 }
 
+// set next & prev to nil
 func (n *Node) breakLinks() {
 	if n == nil {
 		return
