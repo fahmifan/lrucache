@@ -149,7 +149,7 @@ type Item struct {
 // DefaultMaxSize ..
 const DefaultMaxSize int64 = 24
 
-// LRUCacher not concurrent safe
+// LRUCacher ..
 type LRUCacher struct {
 	MaxSize int64
 
