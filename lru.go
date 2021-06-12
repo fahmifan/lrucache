@@ -4,6 +4,7 @@ import (
 	"sync"
 )
 
+// Node ..
 type Node struct {
 	item  Item
 	mutex sync.Mutex
@@ -11,6 +12,7 @@ type Node struct {
 	prev  *Node
 }
 
+// SetItem ..
 func (n *Node) SetItem(i Item) {
 	n.mutex.Lock()
 	n.item = i
@@ -36,6 +38,7 @@ type Queue struct {
 	mutex sync.Mutex
 }
 
+// NewQueue ..
 func NewQueue() *Queue {
 	return &Queue{
 		head: nil,
@@ -120,7 +123,7 @@ func (q *Queue) RemoveNode(node *Node) {
 		return
 	}
 
-	// node is the last in the queue with previos N-nodes
+	// node is the last in the queue with previous N-nodes
 	if node == q.tail {
 		// new tail is the one before the node
 		q.tail = node.prev
@@ -137,11 +140,13 @@ func (q *Queue) RemoveNode(node *Node) {
 	node.breakLinks()
 }
 
+// Item ..
 type Item struct {
 	Key   string
 	Value interface{}
 }
 
+// DefaultMaxSize ..
 const DefaultMaxSize int64 = 24
 
 // LRUCacher not concurrent safe
@@ -184,6 +189,7 @@ func (l *LRUCacher) queueIsFull() bool {
 	return ok
 }
 
+// Put ..
 func (l *LRUCacher) Put(key string, value interface{}) {
 	l.initOnce.Do(func() {
 		if l.MaxSize < 1 {
@@ -222,6 +228,7 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 	l.countMutex.Unlock()
 }
 
+// Get ..
 func (l *LRUCacher) Get(key string) interface{} {
 	l.hashMutex.RLock()
 	defer l.hashMutex.RUnlock()
@@ -238,6 +245,7 @@ func (l *LRUCacher) Get(key string) interface{} {
 	return val.item.Value
 }
 
+// Del ..
 func (l *LRUCacher) Del(key string) interface{} {
 	node := l.getItem(key)
 	if node == nil {
