@@ -120,10 +120,10 @@ const DefaultMaxSize = 24
 
 // LRUCacher not concurrent safe
 type LRUCacher struct {
-	queue       *Queue
-	hash        map[string]*Node
-	MaxSize     int
-	currentSize int
+	queue   *Queue
+	hash    map[string]*Node
+	MaxSize int
+	count   int
 }
 
 func (l *LRUCacher) removeItem(item Item) {
@@ -131,7 +131,7 @@ func (l *LRUCacher) removeItem(item Item) {
 }
 
 func (l *LRUCacher) queueIsFull() bool {
-	return l.currentSize == l.MaxSize
+	return l.count == l.MaxSize
 }
 
 func (l *LRUCacher) Put(key string, value interface{}) {
@@ -171,7 +171,7 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 
 	l.hash[key] = node
 	l.queue.InsertFirst(node)
-	l.currentSize++
+	l.count++
 }
 
 func (l *LRUCacher) Get(key string) interface{} {
@@ -195,5 +195,6 @@ func (l *LRUCacher) Del(key string) interface{} {
 
 	l.queue.RemoveNode(node)
 	l.removeItem(node.item)
+	l.count--
 	return node.item.Value
 }

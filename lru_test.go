@@ -16,8 +16,11 @@ func TestLRUCacher_Del(t *testing.T) {
 	t.Run("one", func(t *testing.T) {
 		lru := &LRUCacher{}
 		lru.Put("1", "1")
+		assert.Equal(t, 1, lru.count)
+
 		val := lru.Del("1")
 		assert.Equal(t, "1", val.(string))
+		assert.Equal(t, 0, lru.count)
 	})
 
 	t.Run("last item", func(t *testing.T) {
