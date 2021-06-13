@@ -8,6 +8,92 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestQueue(t *testing.T) {
+	q := NewQueue()
+	{ // check InsertFirst
+		for i := 0; i < 10; i++ {
+			q.InsertFirst(&Node{Item: Item{
+				Key:   fmt.Sprint(i),
+				Value: fmt.Sprint(i),
+			}})
+		}
+
+		node := q.head
+		for i := 9; i > 0; i-- {
+			if node == nil {
+				break
+			}
+
+			assert.Equal(t, fmt.Sprint(i), node.Item.Value.(string))
+			node = node.next
+		}
+	}
+
+	{ // check RemoveLast
+		q.RemoveLast()
+		node := q.head
+		for i := 9; i > 1; i-- {
+			if node == nil {
+				break
+			}
+
+			assert.Equal(t, fmt.Sprint(i), node.Item.Value.(string))
+			node = node.next
+		}
+	}
+
+	{ // check RemoveNode: head
+		q.RemoveNode(q.head)
+		node := q.head
+		for i := 8; i > 1; i-- {
+			if node == nil {
+				break
+			}
+
+			assert.Equal(t, fmt.Sprint(i), node.Item.Value.(string))
+			node = node.next
+		}
+	}
+
+	{ // check RemoveNode: tail
+		q.RemoveNode(q.tail)
+		node := q.head
+		for i := 8; i > 2; i-- {
+			if node == nil {
+				break
+			}
+
+			assert.Equal(t, fmt.Sprint(i), node.Item.Value.(string))
+			node = node.next
+		}
+	}
+
+	{ // check RemoveNode: middle node
+		node := q.head
+		for i := 8; i > 2; i-- {
+			if i == 5 {
+				assert.NotNil(t, node)
+				break
+			}
+		}
+
+		q.RemoveNode(node)
+		for i := 8; i > 2; i-- {
+			if node == nil {
+				break
+			}
+
+			if i == 5 {
+				// should not exists
+				continue
+			}
+
+			assert.Equal(t, fmt.Sprint(i), node.Item.Value.(string))
+			node = node.next
+		}
+	}
+}
+
 func TestLRUCacher_Del(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		lru := NewLRUCacher(0)
@@ -116,24 +202,24 @@ func TestLRUCacher_PutExistingKey(t *testing.T) {
 func TestLRUCacher_Concurrent(t *testing.T) {
 	wg := sync.WaitGroup{}
 	lru := NewLRUCacher(3)
-	F := fmt.Sprintf
+	F := fmt.Sprint
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			lru.Put(F("%d", i), i)
+			lru.Put(F(i), i)
 		}(i)
 
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			lru.Get(F("%d", i%50))
+			lru.Get(F(i % 50))
 		}(i)
 
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			lru.Del(F("%d", i%50))
+			lru.Del(F(i % 50))
 		}(i)
 	}
 
@@ -144,25 +230,25 @@ func BenchmarkLRUCacher(b *testing.B) {
 	b.Run("Put", func(b *testing.B) {
 		lru := NewLRUCacher(1000)
 		for i := 0; i < b.N; i++ {
-			lru.Put(fmt.Sprintf("%d", i), i)
+			lru.Put(fmt.Sprint(i), i)
 		}
 	})
 
 	lruSeeded := NewLRUCacher(1000)
 	for i := 0; i < 1000; i++ {
-		lruSeeded.Put(fmt.Sprintf("%d", i), i)
+		lruSeeded.Put(fmt.Sprint(i), i)
 	}
 
 	b.Run("Get", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			lruSeeded.Get(fmt.Sprintf("%d", i))
+			lruSeeded.Get(fmt.Sprint(i))
 		}
 	})
 
 	b.Run("Del", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			// non sequential delete
-			lruSeeded.Del(fmt.Sprintf("%d", (i+45)%1000))
+			lruSeeded.Del(fmt.Sprint((i + 45) % 1000))
 		}
 	})
 }

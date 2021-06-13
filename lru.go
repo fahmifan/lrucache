@@ -6,7 +6,7 @@ import (
 
 // Node ..
 type Node struct {
-	item  Item
+	Item  Item
 	mutex sync.Mutex
 	next  *Node
 	prev  *Node
@@ -15,7 +15,7 @@ type Node struct {
 // SetItem ..
 func (n *Node) SetItem(i Item) {
 	n.mutex.Lock()
-	n.item = i
+	n.Item = i
 	n.mutex.Unlock()
 }
 
@@ -187,7 +187,7 @@ func (l *LRUCacher) removeItem(item Item) {
 
 func (l *LRUCacher) putItem(node *Node) {
 	l.hashMutex.Lock()
-	l.hash[node.item.Key] = node
+	l.hash[node.Item.Key] = node
 	l.hashMutex.Unlock()
 
 }
@@ -210,13 +210,13 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 		return
 	}
 
-	node := &Node{item: item}
+	node := &Node{Item: item}
 	if l.queueIsFull() {
 		last := l.queue.RemoveLast()
 		if last == nil {
 			return
 		}
-		l.removeItem(last.item)
+		l.removeItem(last.Item)
 		l.putItem(node)
 		l.queue.InsertFirst(node)
 		return
@@ -241,7 +241,7 @@ func (l *LRUCacher) Get(key string) interface{} {
 		return nil
 	}
 
-	return val.item.Value
+	return val.Item.Value
 }
 
 // Del ..
@@ -252,9 +252,9 @@ func (l *LRUCacher) Del(key string) interface{} {
 	}
 
 	l.queue.RemoveNode(node)
-	l.removeItem(node.item)
+	l.removeItem(node.Item)
 	l.decCount()
-	return node.item.Value
+	return node.Item.Value
 }
 
 func (l *LRUCacher) decCount() {
