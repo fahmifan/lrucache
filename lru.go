@@ -194,9 +194,9 @@ func (l *LRUCacher) putItem(node *Node) {
 
 func (l *LRUCacher) queueIsFull() bool {
 	l.countMutex.RLock()
-	ok := l.count == l.maxSize
+	count := l.count
 	l.countMutex.RUnlock()
-	return ok
+	return count == l.maxSize
 }
 
 // Put ..
@@ -224,10 +224,7 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 
 	l.putItem(node)
 	l.queue.InsertFirst(node)
-
-	l.countMutex.Lock()
-	l.count++
-	l.countMutex.Unlock()
+	l.incCount()
 }
 
 // Get ..
@@ -256,5 +253,18 @@ func (l *LRUCacher) Del(key string) interface{} {
 
 	l.queue.RemoveNode(node)
 	l.removeItem(node.item)
+	l.decCount()
 	return node.item.Value
+}
+
+func (l *LRUCacher) decCount() {
+	l.countMutex.Lock()
+	l.count--
+	l.countMutex.Unlock()
+}
+
+func (l *LRUCacher) incCount() {
+	l.countMutex.Lock()
+	l.count++
+	l.countMutex.Unlock()
 }

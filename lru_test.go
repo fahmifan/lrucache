@@ -18,8 +18,11 @@ func TestLRUCacher_Del(t *testing.T) {
 	t.Run("one", func(t *testing.T) {
 		lru := NewLRUCacher(0)
 		lru.Put("1", "1")
+		assert.Equal(t, int64(1), lru.count)
+
 		val := lru.Del("1")
 		assert.Equal(t, "1", val.(string))
+		assert.Equal(t, int64(0), lru.count)
 	})
 
 	t.Run("last item", func(t *testing.T) {
@@ -99,7 +102,7 @@ func TestLRUCacher(t *testing.T) {
 }
 
 func TestLRUCacher_PutExistingKey(t *testing.T) {
-	lru := &LRUCacher{maxSize: 3}
+	lru := NewLRUCacher(3)
 
 	lru.Put("1", "1")
 	val := lru.Get("1")
@@ -112,7 +115,7 @@ func TestLRUCacher_PutExistingKey(t *testing.T) {
 
 func TestLRUCacher_Concurrent(t *testing.T) {
 	wg := sync.WaitGroup{}
-	lru := &LRUCacher{maxSize: 20}
+	lru := NewLRUCacher(3)
 	F := fmt.Sprintf
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
