@@ -140,6 +140,7 @@ func (q *Queue) RemoveNode(node *Node) {
 	node.breakLinks()
 }
 
+// MoveToFirst move node to the first of the queue
 func (q *Queue) MoveToFirst(node *Node) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
@@ -260,7 +261,7 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 	l.incCount()
 }
 
-// Get ..
+// Get item by key and move the item to the first of the queue
 func (l *LRUCacher) Get(key string) interface{} {
 	l.hashMutex.RLock()
 	defer l.hashMutex.RUnlock()
