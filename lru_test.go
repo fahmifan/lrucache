@@ -94,6 +94,83 @@ func TestQueue(t *testing.T) {
 	}
 }
 
+func TestQueue_MoveFirst(t *testing.T) {
+	t.Run("node is head", func(t *testing.T) {
+		q := NewQueue()
+		seeds(q, 1, 4)
+
+		node := q.head
+		q.MoveToFirst(node)
+
+		for i := 4; i >= 1; i-- {
+			if node == nil {
+				break
+			}
+
+			assert.Equal(t, fmt.Sprint(i), node.Item.Value.(string))
+			node = node.next
+		}
+	})
+
+	t.Run("node is tail", func(t *testing.T) {
+		q := NewQueue()
+		seeds(q, 1, 4)
+		node := q.tail
+		q.MoveToFirst(node)
+
+		assert.Equal(t, q.head, node)
+		assert.Equal(t, "1", node.Item.Value.(string))
+
+		node = node.next
+		assert.Equal(t, "4", node.Item.Value.(string))
+
+		node = node.next
+		assert.Equal(t, "3", node.Item.Value.(string))
+
+		node = node.next
+		assert.Equal(t, "2", node.Item.Value.(string))
+		assert.Equal(t, q.tail, node)
+		assert.Nil(t, node.next)
+	})
+
+	t.Run("node is in middle", func(t *testing.T) {
+		q := NewQueue()
+		seeds(q, 1, 4)
+
+		node := q.head
+		assert.Equal(t, "4", node.Item.Value.(string))
+
+		node = node.next
+		node = node.next
+		assert.Equal(t, "2", node.Item.Value.(string))
+
+		q.MoveToFirst(node)
+		assert.Equal(t, q.head, node)
+		assert.Nil(t, node.prev)
+
+		node = node.next
+		assert.Equal(t, "4", node.Item.Value.(string))
+
+		node = node.next
+		assert.Equal(t, "3", node.Item.Value.(string))
+
+		node = node.next
+		assert.Equal(t, q.tail, node)
+		assert.Equal(t, "1", q.tail.Item.Value.(string))
+		assert.Nil(t, q.tail.next)
+	})
+}
+
+func seeds(q *Queue, from, to int) {
+	for i := 1; i <= 4; i++ {
+		q.InsertFirst(&Node{Item: Item{
+			Key:   fmt.Sprint(i),
+			Value: fmt.Sprint(i),
+		}})
+	}
+
+}
+
 func TestLRUCacher_Del(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		lru := NewLRUCacher(0)
