@@ -253,8 +253,8 @@ func TestLRUCacher(t *testing.T) {
 	lru.Put("4", "4")
 	val = lru.Get("4")
 	assert.Equal(t, "4", val.(string))
-	val = lru.Get("1")
-	assert.Equal(t, nil, val)
+	val = lru.Get("2")
+	assert.Nil(t, val)
 
 	val = lru.Del("4")
 	assert.Equal(t, "4", val.(string))

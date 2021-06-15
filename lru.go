@@ -47,11 +47,11 @@ func NewQueue() *Queue {
 }
 
 func (q *Queue) isEmpty() bool {
-	return q.head == nil && q.tail == nil
+	return q.head == nil || q.tail == nil
 }
 
 func (q *Queue) isOne() bool {
-	return q.head != nil && q.head.next == nil
+	return q.head == q.head.next
 }
 
 // InsertFirst insert Node to the first of the queue
