@@ -162,7 +162,7 @@ func TestQueue_MoveFirst(t *testing.T) {
 }
 
 func seeds(q *Queue, from, to int) {
-	for i := 1; i <= 4; i++ {
+	for i := 1; i <= to; i++ {
 		q.InsertFirst(&Node{Item: Item{
 			Key:   fmt.Sprint(i),
 			Value: fmt.Sprint(i),

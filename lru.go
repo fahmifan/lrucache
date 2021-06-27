@@ -157,7 +157,9 @@ func (q *Queue) MoveToFirst(node *Node) {
 	if q.tail == node {
 		beforeTail := node.prev
 		q.tail = beforeTail
-		beforeTail.next = nil
+		if beforeTail != nil {
+			beforeTail.next = nil
+		}
 
 		node.breakLinks()
 		node.next = q.head
@@ -167,8 +169,15 @@ func (q *Queue) MoveToFirst(node *Node) {
 
 	nodeBefore := node.prev
 	nodeAfter := node.next
-	nodeBefore.next = nodeAfter
-	nodeAfter.prev = nodeBefore
+
+	if nodeBefore != nil {
+		nodeBefore.next = nodeAfter
+	}
+
+	if nodeAfter != nil {
+		nodeAfter.prev = nodeBefore
+	}
+
 	node.breakLinks()
 	node.next = q.head
 	q.head = node
