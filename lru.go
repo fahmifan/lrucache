@@ -111,6 +111,36 @@ func (q *Queue) RemoveNode(node *Node) {
 	node.breakLinks()
 }
 
+func (q *Queue) MoveToFirst(node *Node) {
+	// no need to move, there one or none in the queue
+	if q.isEmpty() || q.isOne() {
+		return
+	}
+
+	if q.head == node {
+		return
+	}
+
+	if q.tail == node {
+		beforeTail := node.prev
+		q.tail = beforeTail
+		beforeTail.next = nil
+
+		node.breakLinks()
+		node.next = q.head
+		q.head = node
+		return
+	}
+
+	nodeBefore := node.prev
+	nodeAfter := node.next
+	nodeBefore.next = nodeAfter
+	nodeAfter.prev = nodeBefore
+	node.breakLinks()
+	node.next = q.head
+	q.head = node
+}
+
 type Item struct {
 	Key   string
 	Value interface{}
@@ -183,6 +213,8 @@ func (l *LRUCacher) Get(key string) interface{} {
 	if !ok {
 		return nil
 	}
+
+	l.queue.MoveToFirst(val)
 
 	return val.item.Value
 }
