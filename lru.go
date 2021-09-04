@@ -135,8 +135,12 @@ func (q *Queue) RemoveNode(node *Node) {
 	after := node.next
 	before := node.prev
 	// link the before & after
-	before.next = after
-	after.prev = before
+	if before != nil {
+		before.next = after
+	}
+	if after != nil {
+		after.prev = before
+	}
 	node.breakLinks()
 }
 
