@@ -102,6 +102,9 @@ func (l *LRUCacher) Put(key string, value interface{}) {
 			return
 		}
 		l.removeItem(last.key)
+		item = l.list.PushFront(item)
+		l.putItem(item)
+		return
 	}
 
 	item = l.list.PushFront(item)
